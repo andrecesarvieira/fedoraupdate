@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=FedoraUpdate
+GenericName=Atualizações do sistema
+Comment=Verifique e instale atualizações do Fedora
+Exec=fedoraupdate
+Icon=org.fedoraupdate.FedoraUpdate
+Terminal=false
+Type=Application
+Categories=Settings;PackageManager;
+Keywords=atualização;pacotes;dnf;fedora;
+StartupNotify=true
+DBusActivatable=false

@@ -1,0 +1,17 @@
+# Rust
+/target/
+
+# RPM build artifacts
+/rpmbuild/
+*.rpm
+
+# Local QA and temporary captures
+/.qa/
+*.xwd
+*.log
+
+# Editor and operating-system files
+/.idea/
+/.vscode/
+.DS_Store
+*~

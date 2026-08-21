@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <vendor>FedoraUpdate</vendor>
+  <icon_name>org.fedoraupdate.FedoraUpdate</icon_name>
+  <action id="org.fedoraupdate.install-updates">
+    <description>Instalar atualizações do sistema</description>
+    <message>É necessário autenticar-se para instalar todas as atualizações do sistema.</message>
+    <defaults>
+      <allow_any>no</allow_any>
+      <allow_inactive>no</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/libexec/fedoraupdate-helper</annotate>
+  </action>
+</policyconfig>

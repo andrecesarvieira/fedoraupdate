@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=FedoraUpdate (indicador)
+Comment=Exibe o estado das atualizações na área de indicadores
+Exec=/usr/bin/fedoraupdate-tray
+Icon=org.fedoraupdate.FedoraUpdate-symbolic
+Terminal=false
+Type=Application
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.fedoraupdate.FedoraUpdate</id>
+  <name>FedoraUpdate</name>
+  <summary>Verifique e instale atualizações do Fedora</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <description>
+    <p>FedoraUpdate verifica diariamente todos os repositórios habilitados,
+    apresenta uma lista resumida de pacotes e só instala atualizações após
+    confirmação explícita do usuário.</p>
+  </description>
+  <launchable type="desktop-id">org.fedoraupdate.FedoraUpdate.desktop</launchable>
+  <provides>
+    <binary>fedoraupdate</binary>
+  </provides>
+  <releases>
+    <release version="0.1.1" date="2026-08-19"/>
+    <release version="0.1.0" date="2026-08-19"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

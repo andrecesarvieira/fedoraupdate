@@ -1,0 +1,10 @@
+[Unit]
+Description=Verificação diária de atualizações do Fedora
+
+[Timer]
+OnCalendar=*-*-* 10:00:00
+Persistent=true
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

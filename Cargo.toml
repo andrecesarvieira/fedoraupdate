@@ -1,0 +1,40 @@
+[package]
+name = "fedoraupdate"
+version = "0.2.6"
+edition = "2024"
+rust-version = "1.92"
+license = "GPL-3.0-or-later"
+description = "Verificador de atualizações nativo para Fedora 44"
+
+[features]
+default = []
+gui = ["dep:gtk4", "dep:adw"]
+tray = ["dep:gtk", "dep:libappindicator"]
+
+[dependencies]
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+libc = "0.2"
+gtk4 = { version = "0.11", optional = true, features = ["v4_18"] }
+adw = { package = "libadwaita", version = "0.9", optional = true, features = ["v1_7"] }
+gtk = { version = "0.18", optional = true }
+libappindicator = { version = "0.9", optional = true }
+
+[[bin]]
+name = "fedoraupdate"
+path = "src/bin/fedoraupdate.rs"
+required-features = ["gui"]
+
+[[bin]]
+name = "fedoraupdate-tray"
+path = "src/bin/fedoraupdate-tray.rs"
+required-features = ["tray"]
+
+[[bin]]
+name = "fedoraupdate-check"
+path = "src/bin/fedoraupdate-check.rs"
+
+[[bin]]
+name = "fedoraupdate-helper"
+path = "src/bin/fedoraupdate-helper.rs"
