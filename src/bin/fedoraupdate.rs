@@ -6,7 +6,8 @@ use fedoraupdate::{
 };
 use gtk::glib;
 use std::cell::Cell;
-use std::process::Command;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -24,6 +25,7 @@ struct Ui {
     count: gtk::Label,
     checked: gtk::Label,
     total: gtk::Label,
+    install_progress: gtk::ProgressBar,
     status: gtk::Label,
     refresh: gtk::Button,
     install_online: gtk::Button,
@@ -73,6 +75,15 @@ fn build_ui(app: &adw::Application) {
     let summary = gtk::Box::new(gtk::Orientation::Vertical, 0);
     summary.set_hexpand(true);
     summary.append(&summary_content);
+
+    let install_progress = gtk::ProgressBar::builder()
+        .visible(false)
+        .pulse_step(0.08)
+        .build();
+    install_progress.set_margin_bottom(16);
+    install_progress.set_margin_start(24);
+    install_progress.set_margin_end(24);
+    summary.append(&install_progress);
     summary.add_css_class("card");
 
     let status = gtk::Label::builder()
@@ -217,6 +228,7 @@ fn build_ui(app: &adw::Application) {
         count,
         checked,
         total,
+        install_progress,
         status,
         refresh: refresh.clone(),
         install_online: install_online.clone(),
@@ -563,21 +575,70 @@ fn install_updates(ui: &Ui, mode: &'static str) {
     ui.count.set_label("Preparando instalação…");
     ui.checked
         .set_label("Aguardando autorização do administrador");
+    ui.total.set_label("Confirme a solicitação do sistema");
+    ui.install_progress.set_visible(true);
+    ui.install_progress.set_fraction(0.0);
     set_status(ui, None);
     let (sender, receiver) = mpsc::channel();
     std::thread::spawn(move || {
-        let result = Command::new("/usr/bin/pkexec")
-            .args(["/usr/libexec/fedoraupdate-helper", mode])
-            .status()
-            .map(|status| (status.code(), status.success()))
-            .map_err(|error| error.to_string());
-        let _ = sender.send(result);
+        let result = (|| {
+            let mut child = Command::new("/usr/bin/pkexec")
+                .args(["/usr/libexec/fedoraupdate-helper", mode])
+                .stdout(Stdio::piped())
+                .spawn()
+                .map_err(|error| error.to_string())?;
+
+            if let Some(stdout) = child.stdout.take() {
+                for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+                    if line == "FEDORAUPDATE_STATUS:AUTHORIZED" {
+                        let _ = sender.send(InstallEvent::Authorized);
+                    } else if let Some(stage) = install_stage(&line) {
+                        let _ = sender.send(InstallEvent::Stage(stage));
+                    }
+                }
+            }
+
+            child
+                .wait()
+                .map(|status| (status.code(), status.success()))
+                .map_err(|error| error.to_string())
+        })();
+        let _ = sender.send(InstallEvent::Finished(result));
     });
 
     let ui = ui.clone();
     glib::timeout_add_local(Duration::from_millis(150), move || {
-        match receiver.try_recv() {
-            Ok(Ok((_, true))) => {
+        ui.install_progress.pulse();
+        let mut finished = None;
+        let mut disconnected = false;
+        loop {
+            let event = match receiver.try_recv() {
+                Ok(event) => event,
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    disconnected = true;
+                    break;
+                }
+            };
+            match event {
+                InstallEvent::Authorized => {
+                    if mode == "offline" {
+                        ui.count.set_label("Preparando atualização…");
+                    } else {
+                        ui.count.set_label("Instalando atualizações…");
+                    }
+                    ui.checked
+                        .set_label("Autorização concluída. Iniciando o DNF…");
+                    ui.total.set_label("Operação em andamento");
+                }
+                InstallEvent::Stage(stage) => ui.checked.set_label(&stage),
+                InstallEvent::Finished(result) => finished = Some(result),
+            }
+        }
+
+        match finished {
+            Some(Ok((_, true))) => {
+                ui.install_progress.set_visible(false);
                 let message = if mode == "offline" {
                     "As atualizações foram preparadas. Reinicie o computador para concluir."
                 } else {
@@ -588,27 +649,85 @@ fn install_updates(ui: &Ui, mode: &'static str) {
                 check_async(&ui);
                 glib::ControlFlow::Break
             }
-            Ok(Ok((Some(126), false))) => {
+            Some(Ok((Some(126), false))) => {
+                ui.install_progress.set_visible(false);
+                ui.count.set_label("Instalação cancelada");
+                ui.checked.set_label("Nenhuma alteração foi feita");
+                ui.total.set_label("");
                 set_status(&ui, Some("Instalação cancelada pelo usuário."));
                 ui.busy.set(false);
                 ui.install_online.set_sensitive(true);
                 ui.install_offline.set_sensitive(true);
                 glib::ControlFlow::Break
             }
-            Ok(Ok((_, false)) | Err(_)) => {
+            Some(Ok((_, false)) | Err(_)) => {
+                ui.install_progress.set_visible(false);
+                ui.count.set_label("Falha na instalação");
+                ui.checked
+                    .set_label("O DNF não conseguiu concluir a operação");
+                ui.total.set_label("");
                 set_status(&ui, Some("Não foi possível instalar as atualizações."));
                 ui.busy.set(false);
                 ui.install_online.set_sensitive(true);
                 ui.install_offline.set_sensitive(true);
                 glib::ControlFlow::Break
             }
-            Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => {
+            None if disconnected => {
+                ui.install_progress.set_visible(false);
+                set_status(&ui, Some("A instalação foi interrompida."));
                 ui.busy.set(false);
                 glib::ControlFlow::Break
             }
+            None => glib::ControlFlow::Continue,
         }
     });
+}
+
+enum InstallEvent {
+    Authorized,
+    Stage(String),
+    Finished(Result<(Option<i32>, bool), String>),
+}
+
+fn install_stage(line: &str) -> Option<String> {
+    let line = line.to_ascii_lowercase();
+    let message = if line.contains("updating and loading repositories")
+        || line.contains("refreshing metadata")
+    {
+        "Atualizando os repositórios…"
+    } else if line.contains("repositories loaded") || line.contains("metadata cache created") {
+        "Repositórios atualizados. Resolvendo dependências…"
+    } else if line.contains("downloading packages") || line.contains("downloading files") {
+        "Baixando os pacotes…"
+    } else if line.contains("running transaction")
+        || line.contains("upgrading:")
+        || line.contains("installing:")
+    {
+        "Aplicando as atualizações…"
+    } else if line.contains("complete!") || line.contains("transaction finished") {
+        "Finalizando a instalação…"
+    } else {
+        return None;
+    };
+    Some(message.to_owned())
+}
+
+#[cfg(test)]
+mod install_tests {
+    use super::install_stage;
+
+    #[test]
+    fn translates_dnf_progress_into_user_facing_stages() {
+        assert_eq!(
+            install_stage("Updating and loading repositories:"),
+            Some("Atualizando os repositórios…".to_owned())
+        );
+        assert_eq!(
+            install_stage("Running transaction"),
+            Some("Aplicando as atualizações…".to_owned())
+        );
+        assert_eq!(install_stage("unrelated output"), None);
+    }
 }
 
 fn show_schedule_dialog(parent: &adw::ApplicationWindow, schedule_label: &gtk::Label) {

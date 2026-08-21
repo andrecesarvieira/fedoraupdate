@@ -1,4 +1,4 @@
-# Design QA — FedoraUpdate 0.2.6
+# Design QA — FedoraUpdate 0.2.7
 
 ## Evidence
 

@@ -1,5 +1,5 @@
 Name:           fedoraupdate
-Version:        0.2.6
+Version:        0.2.7
 Release:        1%{?dist}
 Summary:        Verificador nativo de atualizações para Fedora 44
 
@@ -94,6 +94,11 @@ appstream-util validate-relax --nonet data/org.fedoraupdate.FedoraUpdate.metainf
 %attr(0644,root,root) %{_datadir}/polkit-1/actions/org.fedoraupdate.policy
 
 %changelog
+* Thu Aug 20 2026 FedoraUpdate contributors <noreply@example.invalid> - 0.2.7-1
+- Mostra atividade contínua enquanto o DNF executa a atualização
+- Atualiza a interface assim que o Polkit conclui a autorização
+- Exibe as principais etapas da instalação na janela
+
 * Thu Aug 20 2026 FedoraUpdate contributors <noreply@example.invalid> - 0.2.6-1
 - Expande verticalmente a lista até as ações fixas do rodapé
 - Mantém a rolagem restrita aos pacotes disponíveis
