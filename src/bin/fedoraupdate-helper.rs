@@ -1,5 +1,6 @@
 use anyhow::{Context, Result, bail};
 use std::env;
+use std::io::{self, Write};
 use std::process::{Command, Stdio};
 
 fn main() -> Result<()> {
@@ -18,6 +19,11 @@ fn main() -> Result<()> {
         Some("offline") => &["--refresh", "upgrade", "--offline", "-y"],
         _ => bail!("modo permitido: online ou offline"),
     };
+
+    println!("FEDORAUPDATE_STATUS:AUTHORIZED");
+    io::stdout()
+        .flush()
+        .context("não foi possível informar o estado da autorização")?;
 
     let status = Command::new("/usr/bin/dnf5")
         .args(dnf_args)
