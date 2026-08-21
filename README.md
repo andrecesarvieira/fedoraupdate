@@ -4,6 +4,10 @@ Aplicativo nativo para Fedora Workstation 44 que verifica atualizações com
 DNF5 uma vez por dia, mostra uma lista resumida e somente instala todos os
 pacotes após uma ação explícita do usuário.
 
+## Captura de tela
+
+![Janela principal do FedoraUpdate exibindo as atualizações disponíveis](docs/images/fedoraupdate.png)
+
 > A partir da versão 0.1.1, a janela GTK 4 e o AppIndicator GTK 3 são
 > compilados separadamente para impedir que as duas versões do GTK sejam
 > carregadas no mesmo processo.
